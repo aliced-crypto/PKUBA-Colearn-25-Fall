@@ -177,7 +177,11 @@ def check_md_content(file_content, date, user_tz):
 
 def get_user_study_status(nickname):
     user_status = {}
-    file_name = f"{nickname}{FILE_SUFFIX}"
+    # nickname 可能是相对路径（如果文件在子文件夹中）或文件名
+    if nickname.endswith(FILE_SUFFIX):
+        file_name = nickname
+    else:
+        file_name = f"{nickname}{FILE_SUFFIX}"
     try:
         with open(file_name, 'r', encoding='utf-8') as file:
             file_content = file.read()
@@ -235,20 +239,85 @@ def check_weekly_status(user_status, date, user_tz):
         return "⭕️"
 
 def get_all_user_files():
+    """
+    递归查找所有用户文件，支持子文件夹中的 .md 文件
+    返回格式: (nickname, relative_path)
+    """
     exclude_prefixes = ('template', 'readme')
-    return [f[:-len(FILE_SUFFIX)] for f in os.listdir('.')
-            if f.lower().endswith(FILE_SUFFIX.lower())
-            and not f.lower().startswith(exclude_prefixes)]
+    user_files = []
+    
+    # 递归遍历所有目录
+    for root, dirs, files in os.walk('.'):
+        # 跳过 .git 目录
+        if '.git' in root:
+            continue
+            
+        for f in files:
+            if f.lower().endswith(FILE_SUFFIX.lower()):
+                # 检查是否应该排除
+                should_exclude = False
+                for prefix in exclude_prefixes:
+                    if f.lower().startswith(prefix):
+                        should_exclude = True
+                        break
+                
+                if not should_exclude:
+                    # 获取相对路径
+                    rel_path = os.path.join(root, f)
+                    # 标准化路径（处理 ./ 前缀）
+                    if rel_path.startswith('./'):
+                        rel_path = rel_path[2:]
+                    # 获取文件名（不含扩展名）作为 nickname
+                    nickname = f[:-len(FILE_SUFFIX)]
+                    user_files.append((nickname, rel_path))
+    
+    # 如果文件在子文件夹中，使用相对路径作为标识
+    # 否则使用文件名
+    result = []
+    for nickname, rel_path in user_files:
+        if os.path.dirname(rel_path):  # 在子文件夹中
+            # 使用相对路径作为标识，但去掉扩展名
+            result.append(rel_path[:-len(FILE_SUFFIX)])
+        else:  # 在根目录
+            result.append(nickname)
+    
+    return result
 
 def extract_name_from_row(row):
-    match = re.match(r'\|\s*\[([^\]]+)\]\([^)]+\)\s*\|', row)
-    if match:
-        return match.group(1).strip()
-    else:
-        parts = row.split('|')
-        if len(parts) > 1:
-            return parts[1].strip()
-        return None
+    """
+    从表格行中提取用户标识符
+    优先从 URL 中提取文件路径（去掉扩展名），如果没有则使用显示名称
+    """
+    # 尝试从 markdown 链接的 URL 中提取文件路径
+    url_match = re.search(r'\[([^\]]+)\]\(([^)]+)\)', row)
+    if url_match:
+        display_name = url_match.group(1).strip()
+        url = url_match.group(2).strip()
+        # 从 URL 中提取文件路径（去掉 blob/main/ 前缀和可能的查询参数）
+        # 例如: https://github.com/owner/repo/blob/main/path/to/file.md
+        # 或: path/to/file.md
+        if 'blob/main/' in url:
+            file_path = url.split('blob/main/')[-1].split('?')[0].split('#')[0]
+        else:
+            # 如果不是 GitHub URL，假设是相对路径
+            file_path = url.split('?')[0].split('#')[0]
+        
+        # 去掉 .md 扩展名
+        if file_path.endswith(FILE_SUFFIX):
+            file_path = file_path[:-len(FILE_SUFFIX)]
+        
+        # 如果文件路径存在且不是根目录的文件，使用文件路径作为标识
+        # 否则使用显示名称
+        if file_path and os.path.dirname(file_path):
+            return file_path
+        else:
+            return display_name
+    
+    # 如果没有找到链接，尝试从普通文本中提取
+    parts = row.split('|')
+    if len(parts) > 1:
+        return parts[1].strip()
+    return None
 
 def update_readme(content):
     try:
@@ -292,17 +361,29 @@ def update_readme(content):
 def generate_user_row(user):
     user_status = get_user_study_status(user)
     owner, repo = get_repo_info()
+    
+    # 处理文件路径：user 可能是相对路径或文件名
+    if user.endswith(FILE_SUFFIX):
+        file_path = user
+        display_name = os.path.basename(user)[:-len(FILE_SUFFIX)]
+    else:
+        file_path = f"{user}{FILE_SUFFIX}"
+        display_name = user
+    
     if owner and repo:
-        repo_url = f"https://github.com/{owner}/{repo}/blob/main/{user}{FILE_SUFFIX}"
+        # 确保路径使用正斜杠（GitHub URL 格式）
+        github_path = file_path.replace('\\', '/')
+        repo_url = f"https://github.com/{owner}/{repo}/blob/main/{github_path}"
     else:
         # Fallback to local if repo info is unavailable
-        repo_url = f"{user}{FILE_SUFFIX}"
+        repo_url = file_path
+    
     # replace the username with a markdown link
-    user_link = f"[{user}]({repo_url})"
+    user_link = f"[{display_name}]({repo_url})"
     new_row = f"| {user_link} |"
     is_eliminated = False
 
-    file_name_to_open = f"{user}{FILE_SUFFIX}"
+    file_name_to_open = file_path
     try:
         with open(file_name_to_open, 'r', encoding='utf-8') as file:
             file_content = file.read()
@@ -313,6 +394,37 @@ def generate_user_row(user):
     user_tz = get_user_timezone(file_content)
     now_local = datetime.now(user_tz)
     date_range = get_date_range()
+    
+    # 统计每周的打卡情况
+    week_stats = {}  # week_number -> (has_checkin, week_end_date)
+    for date in date_range:
+        start_utc = date.astimezone(pytz.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        days_from_start = (start_utc.date() - START_DATE.date()).days
+        week_number = days_from_start // 7
+        if week_number not in week_stats:
+            week_stats[week_number] = {'has_checkin': False, 'week_start': None, 'week_end': None}
+        status = user_status.get(start_utc, "⭕️")
+        if status == "✅":
+            week_stats[week_number]['has_checkin'] = True
+        # 更新该周的开始和结束日期
+        if week_stats[week_number]['week_start'] is None:
+            week_stats[week_number]['week_start'] = date
+        week_stats[week_number]['week_end'] = date
+    
+    # 统计请假次数（完全没有打卡的周数）
+    leave_count = 0
+    for week_num, stats in week_stats.items():
+        # 检查该周是否已经完全结束
+        week_end_date = stats.get('week_end')
+        if week_end_date:
+            _, week_end_local = get_local_day_bounds_for_label(week_end_date, user_tz)
+            # 如果该周已经完全结束且没有打卡，算作请假
+            if now_local >= week_end_local and not stats['has_checkin']:
+                leave_count += 1
+    
+    # 如果请假超过1次，标记为失败
+    if leave_count > 1:
+        is_eliminated = True
     
     for i, date in enumerate(date_range):
         # UTC key for this program label day
@@ -330,37 +442,37 @@ def generate_user_row(user):
         if now_local < start_local:
             new_row += " |"
             continue
-            
-        # 计算当前日期属于第几个7天周期
-        days_from_start = (start_utc.date() - START_DATE.date()).days
-        week_number = days_from_start // 7
-        
-        # 计算当前周期的开始和结束日期
-        cycle_start_day = week_number * 7
-        cycle_end_day = min(cycle_start_day + 6, len(date_range) - 1)
-        
-        # 统计当前周期内到今天为止的缺席天数
-        absent_count = 0
-        for day_idx in range(cycle_start_day, min(cycle_end_day + 1, i + 1)):
-            if day_idx < len(date_range):
-                check_start_utc = date_range[day_idx].astimezone(pytz.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-                # End of the label day in user's local timezone
-                _, check_end_local = get_local_day_bounds_for_label(date_range[day_idx], user_tz)
-                # Only count days that have fully ended in user's local time
-                if now_local >= check_end_local:
-                    status = user_status.get(check_start_utc, "⭕️")
-                    if status == "⭕️":
-                        absent_count += 1
         
         # 获取当前日期的状态
         current_status = user_status.get(start_utc, "⭕️")
         
-        # 如果当前周期缺席超过2天，标记为失败
-        if absent_count > 2:
-            is_eliminated = True
-            new_row += " ❌ |"
-        else:
-            new_row += f" {current_status} |"
+        # 计算当前日期属于第几个周
+        days_from_start = (start_utc.date() - START_DATE.date()).days
+        week_number = days_from_start // 7
+        
+        # 检查该周是否已经完全结束
+        week_end_date = week_stats.get(week_number, {}).get('week_end')
+        if week_end_date:
+            _, week_end_local = get_local_day_bounds_for_label(week_end_date, user_tz)
+            # 如果该周已经完全结束且没有打卡，且请假次数超过1次，标记为失败
+            if now_local >= week_end_local:
+                week_has_checkin = week_stats.get(week_number, {}).get('has_checkin', False)
+                if not week_has_checkin:
+                    # 计算到当前周为止的请假次数
+                    current_leave_count = 0
+                    for w_num in range(week_number + 1):
+                        w_stats = week_stats.get(w_num, {})
+                        w_end = w_stats.get('week_end')
+                        if w_end:
+                            _, w_end_local = get_local_day_bounds_for_label(w_end, user_tz)
+                            if now_local >= w_end_local and not w_stats.get('has_checkin', False):
+                                current_leave_count += 1
+                    if current_leave_count > 1:
+                        is_eliminated = True
+                        new_row += " ❌ |"
+                        continue
+        
+        new_row += f" {current_status} |"
             
     return new_row + '\n'
 
