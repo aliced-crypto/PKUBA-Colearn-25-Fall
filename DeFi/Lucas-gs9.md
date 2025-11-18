@@ -10,7 +10,7 @@ timezone: UTC+8
 1. 自我介绍: Lucas
 2. 你认为你会完成这次共学小组吗？ 会
 3. 你感兴趣的小组 DeFi
-4. 你的联系方式（Wechat or Telegram） 18810929103
+4. 你的联系方式（Wechat or Telegram） @The Division Bell
 
 ## Notes
 
