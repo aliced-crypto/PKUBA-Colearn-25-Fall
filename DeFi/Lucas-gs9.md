@@ -24,6 +24,11 @@ timezone: UTC+8
 4.变量需要声明存储位置，memory是临时存储，storage是写到链上，用memory可以节省gas。
 5.external参数使得成员函数可以被外部调用。
 6.在remix调用函数交互时需要metamask确认，交易进行后可以通过sepolia.etherscan.io查看事件日志logs。
+
+### 2025.11.30
+
+对于Week1 Part II的合约，Etherscan中Transaction Receipt Event Logs中Name显示，ChallengeCompleted (index_topic_1 address solver, uint256 timestamp)，代表合约交互成功。
+
 ### 2025.07.12
 
 <!-- Content_END -->
