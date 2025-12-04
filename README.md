@@ -121,9 +121,10 @@
 | [Onchain-data/WaterBearBobit](https://github.com/qingoba/PKUBA-Colearn-25-Fall/blob/main/Onchain-data/WaterBearBobit.md) | ⭕️ | ⭕️ |   | | | | | |
 | [DeFi/lionelll](https://github.com/qingoba/PKUBA-Colearn-25-Fall/blob/main/DeFi/lionelll.md) | ⭕️ | ⭕️ |   | | | | | |
 | [Onchain-data/aliced-crypto](https://github.com/qingoba/PKUBA-Colearn-25-Fall/blob/main/Onchain-data/aliced-crypto.md) | ✅ | ✅ |   | | | | | |
-| [Onchain-data/rayHartley](https://github.com/qingoba/PKUBA-Colearn-25-Fall/blob/main/Onchain-data/rayHartley.md) | ⭕️ | ⭕️ |   | | | | | |
+| [Onchain-data/rayHartley](https://github.com/qingoba/PKUBA-Colearn-25-Fall/blob/main/Onchain-data/rayHartley.md) | ⭕️ | ⭕️ | ✅ | | | | | |
 | [DeFi/pandmonkey](https://github.com/qingoba/PKUBA-Colearn-25-Fall/blob/main/DeFi/pandmonkey.md) | ⭕️ | ⭕️ | ✅ | | | | | |
 <!-- END_COMMIT_TABLE -->
+
 
 
 
