@@ -462,13 +462,14 @@ def generate_user_row(user):
         if now_local >= week_end_local:
             # 如果该周没有打卡，算作请假
             if week_status == "⭕️":
-                leave_count += 1
-                # 如果请假超过1次，标记为失败
-                if leave_count > 1:
-                    is_eliminated = True
-                    new_row += " ❌ |"
-                    continue
-        
+                # 修改：只有从第4周（index 3, 12.08）开始才计入请假次数，前几周仅记录符号
+                if i >= 3:
+                    leave_count += 1
+                    # 如果请假超过1次，标记为失败
+                    if leave_count > 1:
+                        is_eliminated = True
+                        new_row += " ❌ |"
+                        continue
         # 显示该周的状态
         new_row += f" {week_status} |"
             
