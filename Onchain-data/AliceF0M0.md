@@ -7,11 +7,11 @@ timezone: UTC+8
 
 # 你的名字
 
-1. 自我介绍
-2. 你认为你会完成这次共学小组吗？
-3. 你感兴趣的小组
-4. 你的微信号
-5. 质押的交易哈希
+1. 自我介绍: Alice，容易fomo的大龄程序猿
+2. 你认为你会完成这次共学小组吗？: 会的
+3. 你感兴趣的小组: Onchain-data，链上数据分析
+4. 你的联系方式（Wechat or Telegram）
+Wechat: Alice_fo1
 
 ## Notes
 

@@ -11,8 +11,12 @@ timezone: UTC+8
    Annie Huang, 软微研二金科选手
 2. 你认为你会完成这次共学小组吗？
    会吧🥹
-3. 你的联系方式（Wechat or Telegram）
+3.你感兴趣的小组    
+   Onchain-Data
+4. 你的联系方式（Wechat or Telegram）   
    wechat：17771452990
+5.质押的交易哈希    
+   0x799ac5673fdd7f39b46206b2c8ea08d3c1a60c90ea7f6d5f2b311fa4fa46450e
 
 ## Notes
 
@@ -72,6 +76,62 @@ Events 的作用： Events是智能合约与链下应用通信的主要方式。
 零 ETH 交易： 虽然 Value 为 0 ETH，但由于 hello() 函数触发 Event 改变了状态，它仍然需要支付 Gas Fee。   
 
 
-### 2025.07.12
+### 2025.11.24
+transaction hash：0x1f5f22a742984ed13d08219242dc34e1eae894c3d0fc2baf8eeb1260f0438d5c
+<img width="935" height="550" alt="image" src="https://github.com/user-attachments/assets/a53f3f95-3538-402a-b7da-2d02f5595bb8" />
+
+<img width="1130" height="319" alt="image" src="https://github.com/user-attachments/assets/9a73b7f7-b07d-4e29-b1d2-58482d944911" />
+
+
+<img width="496" height="556" alt="image" src="https://github.com/user-attachments/assets/074e9a64-8324-480a-906a-8d0d82b95b91" />
+
+<img width="1037" height="310" alt="image" src="https://github.com/user-attachments/assets/d998bbbf-7a4e-49a8-bdf5-863c6bc132e9" />
+
+### 2025.12.05
+<img width="635" height="213" alt="image" src="https://github.com/user-attachments/assets/61d2c084-d17a-4547-9351-0ff522b30269" />
+
+ 
+number：区块高度（这是第几块）      
+hash：对区块头（header）做哈希得到的结果，是这个区块的“身份证”      
+parentHash：上一块的 hash（父区块）      
+timestamp：出块时间（你显示的是转成本地时间后的）      
+gasUsed / gasLimit：本块所有交易一共消耗了多少 gas、最多可以消耗多少 gas      
+transactions：真正打包进这个区块的那一串交易列表       
+为什么parentHash可以形成区块链：     
+因为每个区块头里都存了前一个区块的哈希 parentHash，而区块自己的 hash 又是对“整个区块头”的哈希，所以一旦你把某个区块的内容（交易、状态等）改动一丁点，它自身的 hash 会变，后一个区块里的 parentHash 就不再匹配，进而导致后面所有区块的 hash 全部连锁出错。     
+     
+gasLimit 如何影响合约执行：      
+交易的 gasLimit 决定“这笔合约能跑多远”，     
+区块的 gasLimit 决定“这一块里能装下多少笔合约”。   
+
+none：决定这是这个地址发出的第几笔交易       
+from/to：交易发起人地址 -> 收款人地址/调用的合约地址/部署合约则to == nil      
+input：合约调用的参数。     
+   普通转账几乎不用 input。     
+   调用合约时：前 4 个字节：函数选择器（哪个函数），后面一长串：按 ABI 编码的参数，做链上分析 / DApp 前端时，需要用 ABI 解码 input 才知道「调用了哪个函数、传了什么参数」。       
+   
+gas/gasPrice：交易的预算和单价     
+value：这笔交易转了多少 ETH，单位是wei，1ETH = 1e18wei        
+type：交易的“收费模式版本” legacy（只有gasPrice，排队纯平单价），EIP-1559（baseFee + prioritytip，基础费用+小费）。    
+
+什么是 ABI（Application Binary Interface） ？一笔交易最终执行逻辑是如何解析 input 的       
+ABI规定函数名 + 参数类型 → 如何生成 4 字节函数选择器（selector）。      
+参数、返回值（address、uint256、数组、字符串…）→ 在交易 input / 事件 logs 里怎么排列、对齐、编码。       
+合约函数返回值怎么打包成 bytes 给调用方       
+是一系列规则和范式，一方面可以把函数+参数按照ABI编码交易input发给合约，合约也可以从input中读取selector和参数并且执行对应的函数，链接的工具也可以用ABI把链上的input解码成能被看懂的函数和参数。    
+       
+一笔交易最终执行逻辑是如何解析 input 的？     
+合约执行时先用前 4 字节 selector 决定“进哪个函数”，再按 ABI 规定的位置从 calldata 里读出每个参数，然后跑对应的函数逻辑。     
+
+status：1（执行成功），0（交易执行失败）。      
+logs：合约在执行过程中“对外广播的事件” （Address：合约地址、Topics：事件签名+indexed参数、Data非indexed参数），依赖logs的信息来知道发生了什么，一般是记账+通知的作用。    
+contractAddress：这笔交易是否创建了新的合约。  
+发起时：to == nil（没有目标地址）     
+执行成功后：EVM 会把新合约的地址写进 receipt.ContractAddress     
+普通转账或者调用已经存在的合约则为零地址。   
+
+
+
+
 
 <!-- Content_END -->
