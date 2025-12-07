@@ -165,9 +165,10 @@ https://sepolia.etherscan.io/tx/0x91e72d0a469e800d7f44f2a02b40518128a5a59eea8124
 
 ### 2025.12.07
 
+#### 转账哈希
 转账哈希：0x6ea04b5764b8db4cc59f7f3f872a45df6fcc0b9d1b8345c4725786de052d0051
 
-本周目标：
+#### 本周目标：
 
 学会用 Geth 的 Go 客户端从 RPC 节点读取链上信息
 理解区块链底层数据结构（block、transaction、receipt）
@@ -210,7 +211,7 @@ Geth 提供了一套Go客户端库，方便Go代码和以太坊交互，常用�
     }
 ```
 
-Part II - Go 语言环境准备
+#### Part II - Go 语言环境准备
 
 在 racknerd ubuntu 22.04 服务器下进行安装
 ```bash
@@ -260,4 +261,148 @@ go run main.go
 
 ```
 
+go version
+```bash
+root@racknerd-9da1d08:/tmp# go version
+go version go1.23.4 linux/amd64
+```
+
+按要求创建go项目
+```bash
+root@racknerd-9da1d08:~/home/PKUBA-1/PKUBA-Colearn-25-Fall# cd writeup/
+root@racknerd-9da1d08:~/home/PKUBA-1/PKUBA-Colearn-25-Fall/writeup# cd week3/
+root@racknerd-9da1d08:~/home/PKUBA-1/PKUBA-Colearn-25-Fall/writeup/week3# mkdir week3-geth
+root@racknerd-9da1d08:~/home/PKUBA-1/PKUBA-Colearn-25-Fall/writeup/week3# cd week3-geth
+root@racknerd-9da1d08:~/home/PKUBA-1/PKUBA-Colearn-25-Fall/writeup/week3/week3-geth# go mod init week3-geth
+go: creating new go.mod: module week3-geth
+```
+
+`go mod init 会创建一个 go.mod 文件，记录当前项目的模块名和依赖信息，后面 go get 的第三方库都会写进这里。`
+
+```Go
+package main
+
+// fmt 是go 自带的打印工具包
+import (
+	"fmt"
+)
+
+func main() {
+	fmt.Println("Hello, World!")
+}
+```
+
+安装 go-ethereum 库
+```bash
+go get github.com/ethereum/go-ethereum
+```
+
+#### Part III - 使用 go-ethereum 读取链上数据
+
+```bash 
+# 第一次运行出现了如下的报错，原因是存在包未被安装
+# 解决办法是 go mod tidy
+root@racknerd-9da1d08:~/home/PKUBA-1/PKUBA-Colearn-25-Fall/writeup/week3/week3-geth# go run main.go
+/root/go/pkg/mod/github.com/ethereum/go-ethereum@v1.16.7/rpc/websocket.go:30:2: missing go.sum entry for module providing package github.com/deckarep/golang-set/v2 (imported by github.com/ethereum/go-ethereum/rpc); to add:
+        go get github.com/ethereum/go-ethereum/rpc@v1.16.7
+/root/go/pkg/mod/github.com/ethereum/go-ethereum@v1.16.7/metrics/cpu_enabled.go:24:2: missing go.sum entry for module providing package github.com/shirou/gopsutil/cpu (imported by github.com/ethereum/go-ethereum/metrics); to add:
+        go get github.com/ethereum/go-ethereum/metrics@v1.16.7
+/root/go/pkg/mod/github.com/ethereum/go-ethereum@v1.16.7/rpc/client_opt.go:22:2: missing go.sum entry for module providing package github.com/gorilla/websocket (imported by github.com/ethereum/go-ethereum/rpc); to add:
+        go get github.com/ethereum/go-ethereum/rpc@v1.16.7
+```
+
+```go
+package main
+
+// fmt 是go 自带的打印工具包
+import (
+	"fmt"
+	"context"
+	"log"
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/common"
+)
+
+func main() {
+	/*
+	创建一个“最干净、最基础、永远不会被取消的上下文对象”
+	用来作为后续 请求控制、超时控制、取消控制、链路传递 的“起点”。
+	*/
+	ctx := context.Background()
+
+	// 连接公共rpc
+	client, err := ethclient.Dial("https://eth-sepolia.g.alchemy.com/v2/your-keys")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
+	
+	// 获取当前的区块高度
+	head, err := client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("current block:", head.Number.String())
+
+	// 查询指定区块的信息
+	targetBlock := big.NewInt(123456)
+	block, err := client.BlockByNumber(ctx, targetBlock)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("block #%s hash:",block.Number().String(), block.Hash().Hex())
+	fmt.Println("block parent hash:", block.ParentHash().Hex())
+	fmt.Println("tx count:", len(block.Transactions()))
+	
+	fmt.Println("block timestamp:", block.Time())
+	fmt.Println("block gas used:", block.GasUsed())
+	fmt.Println("block gas limit:", block.GasLimit())
+ 
+	// 查询交易和回执-测试交易用哈希0xe50abcfd869dcce23446b82e666f563f99b7f7563c4208cb656cb52cba376ba5
+	fmt.Println("week1 - transer hash:", "0xe50abcfd869dcce23446b82e666f563f99b7f7563c4208cb656cb52cba376ba5")
+	txHash := common.HexToHash("0xe50abcfd869dcce23446b82e666f563f99b7f7563c4208cb656cb52cba376ba5")
+	tx, isPending, err := client.TransactionByHash(ctx, txHash)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("tx pending:", isPending)
+	if to := tx.To(); to != nil {
+		fmt.Println("to:", to.Hex())
+	} else {
+		fmt.Println("to: contract creation")
+	}
+	fmt.Println("value:", tx.Value().String())
+
+	//  接收交易地址
+	receipt, err := client.TransactionReceipt(ctx, txHash)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("receipt status:", receipt.Status)
+	fmt.Println("logs:", len(receipt.Logs))
+}
+```
+- 运行结果
+```bash
+# 我查询的是第一周的转账交易
+root@racknerd-9da1d08:~/home/PKUBA-1/PKUBA-Colearn-25-Fall/writeup/week3/week3-geth# go run main.go
+current block: 9787870
+block #%s hash: 123456 0x2056507046b07a5d7ed4f124a7febce2aec7295b464746523787b8c2acc627dc
+block parent hash: 0x93bff867b68a2822ee7b6e0a4166cfdf5fc4782d60458fae1185de9b2ecdba16
+tx count: 0
+block timestamp: 1636715788
+block gas used: 0
+block gas limit: 8000000
+
+week1 - transer hash: 0xe50abcfd869dcce23446b82e666f563f99b7f7563c4208cb656cb52cba376ba5
+tx pending: false
+to: 0x00000000bb09009cDCD358d6c5CE6F56611577f1
+value: 99978999999706000
+receipt status: 1
+logs: 0
+```
 <!-- Content_END -->
